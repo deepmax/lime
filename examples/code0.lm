@@ -1,0 +1,5 @@
+var s: str = "Hi"
+
+var x = s
+
+print(s, "\n", x)

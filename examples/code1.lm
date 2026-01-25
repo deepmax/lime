@@ -1,0 +1,29 @@
+func factorial(n : i32) : i32 {
+    if n <= 1 {
+        ret 1
+    }
+    ret factorial(n - 1) * n
+}
+
+
+func max(a: i32, b: i32): i32 {
+    if a > b {
+        ret a
+    } else {
+        ret b
+    }
+}
+
+var a = factorial(3)
+
+print(a)
+
+
+# struct point {
+#   var x: real
+#   var y: real
+# }
+# var s: point
+# s.x = 1.1
+$ s.y = 2.2
+# var a: array[point*3] = [point(1,1), point(2,2), point(3.3)]
