@@ -3,7 +3,7 @@ A discovery of creating new programming language with a tiny virtual machine
 
 
 ```
-func factorial(n : i32) : i32
+func factorial(n: i32): i32
 {
     if n <= 1 {
         return 1
@@ -12,8 +12,8 @@ func factorial(n : i32) : i32
     }
 }
 
-print factorial(5)
-print "🍾"
+print(factorial(5))
+print("🍾")
 ```
 
 
