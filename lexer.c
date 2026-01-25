@@ -52,6 +52,7 @@ void lexer_load_file(const char* filename)
     look = 0;
     is_stdin = false;
     file = fopen(filename, "r");
+    // TODO: handle if can not open file
 }
 
 void lexer_load_stdin()

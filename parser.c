@@ -761,8 +761,6 @@ void parser_free()
 
 void parser_parse()
 {
-    vm_init();
-
     ast_block_t* block = ast_new_block(MT_UNKNOWN, global_context);
 
     statements(block, TK_FIN);
@@ -770,8 +768,4 @@ void parser_parse()
     eval((ast_t*) block);
 
     EMIT(HALT);
-
-    vm_dasm("out.asm");
-    
-    vm_exec();
 }

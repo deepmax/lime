@@ -912,21 +912,21 @@ size_t vm_dasm_opcode(FILE *file, size_t ip)
 
 void vm_dasm(const char* filename)
 {
-    // FILE* file = fopen(filename, "w");
-    // if (file == NULL)
-    // {
-    //     fprintf(stderr, "Error: Cannot open file '%s' for writing\n", filename);
-    //     return;
-    // }
+    FILE* file = fopen(filename, "w");
+    if (file == NULL)
+    {
+        fprintf(stderr, "Error: Cannot open file '%s' for writing\n", filename);
+        return;
+    }
 
-    FILE* file = stdout;
+    // FILE* file = stdout;
 
     for (size_t ip = 0; ip < vm.code.used; ip++)
     {
         ip += vm_dasm_opcode(file, ip);
     }
 
-    // fclose(file);
+    fclose(file);
 }
 
 void vm_code_emit(uint8_t* bytes, size_t len)
