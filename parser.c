@@ -685,7 +685,12 @@ ast_t* semicolon()
     return NULL;
 }
 
-ast_t* statement(bool_t* drop)
+ast_t* drop()
+{
+    return (ast_t*)ast_new_single_opcode(MT_UNKNOWN, DROP);
+}
+
+ast_t* statement(bool_t* free_expr)
 {
     switch (look.type)
     {
@@ -708,9 +713,10 @@ ast_t* statement(bool_t* drop)
     case TK_L_BRACE:
         return block(MB_NORMAL, NULL);
     default:
-        if(drop) *drop = true;
+        if(free_expr) *free_expr = true;
         return expression();
     }
+
     return NULL;
 }
 
@@ -718,11 +724,12 @@ void statements(ast_block_t* block, token_type_t finish)
 {
     while (look.type != finish)
     {
-        bool_t drop = false;
-        vec_append(block->nodes, statement(&drop));
+        bool_t is_free_expr = false;
+        ast_t* stmt = statement(&is_free_expr);
+        vec_append(block->nodes, stmt);
 
-        if (drop == true)
-            vec_append(block->nodes, (ast_t*)ast_new_single_opcode(MT_UNKNOWN, DROP));
+        if (is_free_expr && stmt)
+            vec_append(block->nodes, drop());
     }
 }
 
