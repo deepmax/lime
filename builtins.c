@@ -7,6 +7,7 @@
 static const type_t INTEGER_TYPES[] = {MT_INT8, MT_INT16, MT_INT32, MT_INT64, MT_UINT8, MT_UINT16, MT_UINT32, MT_UINT64, MT_BOOL, MT_UNKNOWN};
 static const type_t REAL_TYPES[] = {MT_REAL, MT_UNKNOWN};
 static const type_t STR_TYPES[] = {MT_STR, MT_UNKNOWN};
+static const type_t ARRAY_TYPES[] = {MT_ARRAY, MT_UNKNOWN};
 static const type_t NUMERIC_TYPES[] = {MT_INT8, MT_INT16, MT_INT32, MT_INT64, MT_UINT8, MT_UINT16, MT_UINT32, MT_UINT64, MT_REAL, MT_BOOL, MT_UNKNOWN};
 static const type_t PRINT_TYPES[] = {MT_INT8, MT_INT16, MT_INT32, MT_INT64, MT_UINT8, MT_UINT16, MT_UINT32, MT_UINT64, MT_REAL, MT_BOOL, MT_STR, MT_UNKNOWN};
 
@@ -38,7 +39,8 @@ static const builtin_func_t BUILTIN_FUNCTIONS[] = {
     {"u64", 1, MT_UINT64, IU64CAST, INTEGER_TYPES},
     {"itor", 1, MT_REAL, ITOR, INTEGER_TYPES},
     {"rtoi", 1, MT_INT64, RTOI, REAL_TYPES},
-
+    {"slen", 1, MT_INT64, SLEN, STR_TYPES},
+    {"alen", 1, MT_INT64, ALEN, ARRAY_TYPES},
 };
 
 // TODO: inc and dec for integer and real types need passing address of the variable to the builtin function

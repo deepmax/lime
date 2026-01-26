@@ -21,6 +21,7 @@ ast_t* factor();
 ast_t* expression();
 ast_t* ident();
 ast_t* func_call(const char* id);
+ast_t* array_scalar();
 void statements(ast_block_t* block, token_type_t finish);
 
 typedef struct
@@ -351,6 +352,9 @@ ast_t* factor()
     else if (is_unary(look.type))
     {
         node = unary_expr();
+    } else if (look.type == TK_L_BRACKET)
+    {
+        node = array_scalar();
     }
     else
     {
@@ -360,7 +364,7 @@ ast_t* factor()
     return node;
 }
 
-ast_t* assign(bool_t new_variable, const char* id)
+ast_t* assign(bool_t new_variable, const char* id, ast_t* index_expr)
 {
     symbol_t* s = context_get(context, id, false);
 
@@ -379,13 +383,20 @@ ast_t* assign(bool_t new_variable, const char* id)
         panic("No type to assign.");
     }
 
-    if (s->type == MT_UNKNOWN)
+    type_t var_type = s->type;
+
+    if (index_expr)
     {
-        s->type = expr_type;
+        var_type = s->extra.array.elmnt_type;
     }
-    else if (s->type != expr_type)
+
+    if (var_type == MT_UNKNOWN)
     {
-        if (can_implicitly_cast_integer(expr_type, s->type))
+        var_type = expr_type;
+    }
+    else if (var_type != expr_type)
+    {
+        if (can_implicitly_cast_integer(expr_type, var_type))
         {
 
         }
@@ -395,7 +406,15 @@ ast_t* assign(bool_t new_variable, const char* id)
         }
     }
 
-    return (ast_t*) ast_new_assign(MT_UNKNOWN, s, expr, new_variable);
+    if (expr_type == MT_ARRAY)
+    {
+        s->extra.array.elmnt_type = ((ast_array_scalar_t*)expr)->elmnt_type;
+        s->extra.array.len = vec_size(((ast_array_scalar_t*)expr)->elmnts);
+    }
+
+    s->type = var_type;
+
+    return (ast_t*) ast_new_assign(MT_UNKNOWN, s, expr, index_expr, new_variable);
 }
 
 ast_t* var()
@@ -418,7 +437,7 @@ ast_t* var()
     }
 
     if (look.type == TK_ASSIGN)
-        return assign(true, id);
+        return assign(true, id, NULL);
 
     if (s->type == MT_UNKNOWN)
         panic("No type declared for the variable.");
@@ -439,10 +458,21 @@ ast_t* ident()
     if (s == NULL)
         panic("Identifier is not defined.");
 
-    if (look.type == TK_ASSIGN)
-        return assign(false, id);
+    type_t var_type = s->type;
 
-    return (ast_t*) ast_new_variable(s->type, context_get(context, id, false));
+    ast_t* index_expr = NULL;
+    if (look.type == TK_L_BRACKET)
+    {
+        match(TK_L_BRACKET);
+        index_expr = expression();
+        match(TK_R_BRACKET);
+        var_type = s->extra.array.elmnt_type;
+    }
+
+    if (look.type == TK_ASSIGN)
+        return assign(false, id, index_expr);
+
+    return (ast_t*) ast_new_variable(var_type, context_get(context, id, false), index_expr);
 }
 
 ast_t* block(block_t type, vector_t* params)
@@ -677,6 +707,54 @@ ast_t* continue_loop()
         panic("Continue statement outside of loop.");
     match(TK_CONTINUE);
     return (ast_t*) ast_new_continue_loop(MT_UNKNOWN, context_get_loop(context));
+}
+
+ast_t* array_scalar()
+{
+    match(TK_L_BRACKET);
+
+    vector_t* elmnts = vec_new(0);
+
+    type_t elmnt_type = MT_UNKNOWN;
+
+    while (look.type != TK_R_BRACKET)
+    {
+        ast_t* expr = expression();
+
+        if (elmnt_type == MT_UNKNOWN)
+        {
+            elmnt_type = expr->base->type;
+        }
+
+        vec_append(elmnts, expr);
+
+        if (look.type == TK_R_BRACKET)
+            break;
+        match(TK_COMMA);
+    }
+    match(TK_R_BRACKET);
+
+    for (size_t i = 1; i < vec_size(elmnts); i++)
+    {
+        type_t t = ((ast_t*)vec_get(elmnts, i))->base->type;
+
+        if (t != elmnt_type)
+        {
+            if (is_integer_type(elmnt_type) && is_integer_type(t))
+            {
+                elmnt_type = mix_integer_types(elmnt_type, t);
+            } else {
+                panic("All array items must have same type.");
+            }
+        }
+    }
+
+    if (vec_size(elmnts) == 0)
+    {
+        panic("Zero length array is not allowed.");
+    }
+
+    return (ast_t*) ast_new_array_scalar(MT_ARRAY, elmnt_type, elmnts);
 }
 
 ast_t* semicolon()

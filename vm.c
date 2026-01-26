@@ -123,15 +123,15 @@ const opcode_t OPCODES[] = {
     {RCONST_PI, 0, "rconst_pi"},
     {RPRINT, 0, "rprint"},
     {RTOI, 0, "rtoi"},
-    {SLOAD, 2, "sload"},
-    {SSTORE, 2, "sstore"},
-    {SCONST, 2, "sconst"},
+    {XLOAD, 2, "xload"},
+    {XSTORE, 2, "xstore"},
+    {XCONST, 2, "xconst"},
     {SPRINT, 0, "sprint"},
     {SLEN, 0, "slen"},
-    // XLOAD
-    // XLOADG
-    // XSTORE
-    // XSTOREG
+    {AINIT, 2, "ainit"},
+    {AINDXR, 0, "aindxr"},
+    {AINDXW, 2, "aindxw"},
+    {ALEN, 0, "alen"},
     {NPRINT, 0, "nprint"},
 };
 
@@ -154,14 +154,27 @@ void vm_free()
     buffer_free(&vm.code);
 }
 
-void print_stack(const char* prefix)
+void print_vm_info()
 {
-    printf("%s: [", prefix);
+    printf("stack: [");
     for (int i=0; i<20; i++)
     {
         printf("%2lx%2c ", vm.stack[i].as_uint64, (i==vm.sp)?'<':' ');
     }
     printf("]\n");
+
+
+    printf("data : [", buffer_size(&vm.data));
+    for (size_t i = 0; i < buffer_size(&vm.data); i++)
+    {
+        printf("%2x ", buffer_get(&vm.data, i));
+        if ((i+1) % 16 == 0)
+            printf("\n");
+    }
+    printf("]\n");
+
+    printf("regs : [ip: %3x, sp: %3d, bp: %3d] ", vm.ip, vm.sp, vm.bp);
+    vm_dasm_opcode(stdout, vm.ip);
 }
 
 void vm_check_stack(size_t n)
@@ -176,9 +189,7 @@ void vm_check_stack(size_t n)
 
 void exec_opcode(uint8_t* opcode)
 {
-    // print_stack("before");
-    // printf("\t[ip: %3x, sp: %3d, bp: %3d] ", vm.ip, vm.sp, vm.bp);
-    // vm_dasm_opcode(stdout, vm.ip);
+    // print_vm_info();
     switch (*opcode)
     {
     case HALT:
@@ -825,7 +836,7 @@ void exec_opcode(uint8_t* opcode)
         ++vm.ip;
         break;
     }
-    case SLOAD:
+    case XLOAD:
     {
         vm_check_stack(1);
         vm.stack[vm.sp + 1].as_uint16 = vm.stack[vm.bp + *((uint16_t*) (opcode + 1))].as_uint16;
@@ -833,14 +844,14 @@ void exec_opcode(uint8_t* opcode)
         vm.ip += 3;
         break;
     }
-    case SSTORE:
+    case XSTORE:
     {
         vm.stack[vm.bp + *((uint16_t*) (opcode + 1))].as_uint16 = vm.stack[vm.sp].as_uint16;
         --vm.sp;
         vm.ip += 3;
         break;
     }
-    case SCONST:
+    case XCONST:
     {
         vm_check_stack(1);
         vm.stack[++vm.sp].as_int16 = *((uint16_t*) (opcode + 1));
@@ -860,7 +871,68 @@ void exec_opcode(uint8_t* opcode)
         vm_check_stack(1);
         uint16_t str_addr = vm.stack[vm.sp].as_uint16;
         const char* str = (const char*)&vm.data.data[str_addr];
-        vm.stack[++vm.sp].as_int64 = (int64_t)utf8len(str);
+        vm.stack[vm.sp].as_int64 = (int64_t)utf8len(str);
+        ++vm.ip;
+        break;
+    }
+    case AINIT:
+    {
+        uint16_t array_addr = *((uint16_t*) (opcode + 1));
+        uint16_t array_len = *(uint16_t*)&vm.data.data[array_addr];
+        type_t elmnt_type = *(uint8_t*)&vm.data.data[array_addr + 2];
+        size_t elmnt_size = type_size(elmnt_type);
+        size_t array_info = sizeof(uint16_t) + sizeof(uint8_t);
+
+        for (uint16_t i = 0; i < array_len; i++)
+        {
+            value_t v = vm.stack[vm.bp + vm.sp - array_len + i];
+            buffer_sets(&vm.data, array_info + array_addr + i * elmnt_size, (uint8_t*)&v, elmnt_size);
+        }
+
+        vm.sp -= array_len;
+        vm.stack[++vm.sp].as_int64 = array_addr;
+        vm.ip += 3;
+        break;
+    }
+    case AINDXR:
+    {
+        vm_check_stack(1);
+        const uint16_t array_addr = vm.stack[vm.sp--].as_uint16;
+        const uint16_t index = vm.stack[vm.sp--].as_uint64;
+        const uint8_t elmnt_size = type_size(*(uint8_t*)&(vm.data.data[array_addr + 2]));
+        const size_t n = array_addr +  sizeof(uint16_t) + sizeof(uint8_t) + index * elmnt_size;
+        value_t v; v.as_uint64 = 0;
+        memcpy(&v,  vm.data.data + n, elmnt_size);
+        vm.stack[++vm.sp] = v;
+        ++vm.ip;
+        break;
+
+        // uint16_t array_len = *(uint16_t*)&vm.data.data[array_addr];
+        // TODO: if (index >= array_len) {}
+    }
+    case AINDXW:
+    {
+        vm_check_stack(1);
+        const uint16_t array_addr = vm.stack[vm.bp + *((uint16_t*) (opcode + 1))].as_uint16;
+        const uint16_t index = vm.stack[vm.sp--].as_uint64;
+        const uint8_t elmnt_size = type_size(*(uint8_t*)&(vm.data.data[array_addr + 2]));
+        const size_t n = array_addr + sizeof(uint16_t) + sizeof(uint8_t) + index * elmnt_size;
+        value_t v;
+        v.as_uint64 = 0;
+        memcpy(&v,  vm.data.data + n, elmnt_size);
+        vm.stack[++vm.sp] = v;
+        vm.ip += 3;
+        break;
+
+        // uint16_t array_len = *(uint16_t*)&vm.data.data[array_addr];
+        // TODO: if (index >= array_len) {}
+    }
+    case ALEN:
+    {
+        vm_check_stack(1);
+        uint16_t array_addr = vm.stack[vm.sp].as_uint16;
+        const uint16_t len = *(uint16_t*)&vm.data.data[array_addr];
+        vm.stack[vm.sp].as_int64 = len;
         ++vm.ip;
         break;
     }

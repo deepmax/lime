@@ -24,6 +24,11 @@ bool_t is_integer_type(type_t type)
         type == MT_UINT8 || type == MT_UINT16 || type == MT_UINT32 || type == MT_UINT64;
 }
 
+bool_t is_array_type(type_t type)
+{
+    return type == MT_ARRAY;
+}
+
 bool_t is_str_type(type_t type)
 {
     return type == MT_STR;
@@ -100,7 +105,7 @@ bool_t need_explicit_cast_integer(type_t from, type_t to)
     return type_size(from) >= type_size(to);
 }
 
-type_t mix_numerical_types(type_t t1, type_t t2)
+type_t mix_integer_types(type_t t1, type_t t2)
 {
     bool_t t1int = is_integer_type(t1);
     bool_t t2int = is_integer_type(t2);
@@ -111,6 +116,19 @@ type_t mix_numerical_types(type_t t1, type_t t2)
             return t1;
         else
             return t2;
+    }
+
+    return MT_UNKNOWN;
+}
+
+type_t mix_numerical_types(type_t t1, type_t t2)
+{
+    bool_t t1int = is_integer_type(t1);
+    bool_t t2int = is_integer_type(t2);
+
+    if (t1int && t2int)
+    {
+        return mix_integer_types(t1, t2);
     }
 
     if ((t1int && t2 == MT_REAL) ||

@@ -102,15 +102,15 @@ enum
     RCONST_PI,
     RPRINT,
     RTOI,
-    SLOAD,
-    SSTORE,
-    SCONST,
+    XLOAD,
+    XSTORE,
+    XCONST,
     SPRINT,
     SLEN,
-    // XLOAD
-    // XLOADG
-    // XSTORE
-    // XSTOREG
+    AINIT,
+    AINDXR,
+    AINDXW,
+    ALEN,
     NPRINT,
 };
 

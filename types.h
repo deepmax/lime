@@ -64,10 +64,12 @@ bool_t is_integer_type(type_t type);
 bool_t is_str_type(type_t type);
 bool_t is_real_type(type_t type);
 bool_t is_bool_type(type_t type);
+bool_t is_array_type(type_t type);
 bool_t is_unsigned_integer_type(type_t type);
 size_t type_size(type_t type);
 bool_t can_implicitly_cast_integer(type_t from, type_t to);
 bool_t need_explicit_cast_integer(type_t from, type_t to);
+type_t mix_integer_types(type_t t1, type_t t2);
 type_t mix_numerical_types(type_t t1, type_t t2);
 
 

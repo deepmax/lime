@@ -71,6 +71,7 @@ typedef struct
     ast_t* base;
     ast_t* expr;
     symbol_t* symbol;
+    ast_t* index_expr;
     bool_t new_variable;
 } ast_assign_t;
 
@@ -78,6 +79,7 @@ typedef struct
 {
     ast_t* base;
     symbol_t* symbol;
+    ast_t* index_expr;
 } ast_variable_t;
 
 typedef struct
@@ -133,6 +135,13 @@ typedef struct
     loop_t* loop;
 } ast_continue_loop_t;
 
+typedef struct
+{
+    ast_t* base;
+    vector_t* elmnts;
+    type_t elmnt_type;
+} ast_array_scalar_t;
+
 void eval(ast_t* ast);
 ast_constant_t* ast_new_constant(type_t type, value_t value);
 ast_unary_t* ast_new_unary(type_t type, token_type_t op, ast_t* expr);
@@ -140,8 +149,8 @@ ast_binary_t* ast_new_binary(type_t type, token_type_t op, ast_t* lhs_expr, ast_
 ast_block_t* ast_new_block(type_t type, context_t* context);
 ast_single_opcode_t* ast_new_single_opcode(type_t type, uint8_t opcode);
 ast_if_cond_t* ast_new_if_cond(type_t type, ast_t* condition, ast_t* if_then, ast_t* if_else);
-ast_assign_t* ast_new_assign(type_t type, symbol_t* symbol, ast_t* expr, bool_t new_variable);
-ast_variable_t* ast_new_variable(type_t type, symbol_t* symbol);
+ast_assign_t* ast_new_assign(type_t type, symbol_t* symbol, ast_t* expr, ast_t* index_expr, bool_t new_variable);
+ast_variable_t* ast_new_variable(type_t type, symbol_t* symbol, ast_t* index_expr);
 ast_func_decl_t* ast_new_func_decl(type_t type, symbol_t* symbol, ast_block_t* body, uint16_t args);
 ast_func_call_t* ast_new_func_call(type_t type, symbol_t* symbol, vector_t* args);
 ast_builtin_call_t* ast_new_builtin_call(type_t type, const char* name, vector_t* args);
@@ -149,6 +158,7 @@ ast_func_return_t* ast_new_func_return(type_t type, ast_t* expr);
 ast_for_loop_t* ast_new_for_loop(type_t type, ast_t* init, ast_t* condition, ast_t* post, ast_t* body);
 ast_break_loop_t* ast_new_break_loop(type_t type, loop_t* loop);
 ast_continue_loop_t* ast_new_continue_loop(type_t type, loop_t* loop);
+ast_array_scalar_t* ast_new_array_scalar(type_t type, type_t elmnt_type, vector_t* elmnts);
 
 #ifdef __cplusplus
 }

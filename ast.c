@@ -72,7 +72,7 @@ void eval_constant(ast_constant_t* ast)
     {
         uint16_t addr = vm_data_used();
         vm_data_emit((uint8_t*)ast->value.as_str, utf8size((utf8_int8_t*)ast->value.as_str));
-        EMIT(SCONST, NUM16(addr));
+        EMIT(XCONST, NUM16(addr));
     }
 }
 
@@ -303,12 +303,27 @@ void eval_assign(ast_assign_t* ast)
     type_t var_type = ast->symbol->type;
     uint16_t addr = ast->symbol->addr;
 
-    if (is_integer_type(var_type)) {
+    if (ast->index_expr)
+    {
+        eval(ast->index_expr);
+        EMIT(AINDXW);
+        EMIT(XSTORE, NUM16(ast->symbol->addr));
+    }
+    else if (is_integer_type(var_type))
+    {
         EMIT(ISTORE, NUM16(addr));
-    } else if (is_real_type(var_type)) {
+    }
+    else if (is_real_type(var_type))
+    {
         EMIT(RSTORE, NUM16(addr));
-    } else if (is_str_type(var_type)) {
-        EMIT(SSTORE, NUM16(addr));
+    }
+    else if (is_str_type(var_type))
+    {
+        EMIT(XSTORE, NUM16(addr));
+    }
+    else if (is_array_type(var_type))
+    {
+        EMIT(XSTORE, NUM16(addr));
     }
 
     if (!ast->new_variable)
@@ -321,13 +336,25 @@ void eval_variable(ast_variable_t* ast)
 {
     type_t var_type = ast->symbol->type;
     uint16_t addr = ast->symbol->addr;
-    
-    if (is_integer_type(var_type)) {
+
+    if (ast->index_expr)
+    {
+        eval(ast->index_expr);
+        EMIT(XLOAD, NUM16(ast->symbol->addr));
+        EMIT(AINDXR);
+    }
+    else if (is_integer_type(var_type)) {
         EMIT(ILOAD, NUM16(addr));
-    } else if (is_real_type(var_type)) {
+    } 
+    else if (is_real_type(var_type)) {
         EMIT(RLOAD, NUM16(addr));
-    } else if (is_str_type(var_type)) {
-        EMIT(SLOAD, NUM16(addr));
+    }
+    else if (is_str_type(var_type)) {
+        EMIT(XLOAD, NUM16(addr));
+    }
+    else if (is_array_type(var_type))
+    {
+        EMIT(XLOAD, NUM16(addr));
     }
 }
 
@@ -461,6 +488,31 @@ void eval_continue_loop(ast_continue_loop_t* ast)
     JUMP(JMP, ast->loop->post);
 }
 
+void eval_array_scalar(ast_array_scalar_t* ast)
+{
+    for (size_t i = 0; i < vec_size(ast->elmnts); i++)
+    {
+        eval(vec_get(ast->elmnts, i));
+    }
+
+    type_t elmnt_type = ast->elmnt_type;
+    size_t array_addr = vm_data_used();
+    size_t array_len = vec_size(ast->elmnts);
+    size_t elmnt_size = type_size(elmnt_type);
+    size_t array_size = array_len * elmnt_size;
+    uint8_t data[array_size];
+    size_t array_info = sizeof(uint16_t) + sizeof(uint8_t);
+
+    memset(data, 0, array_size + array_info);
+
+    *(uint16_t*)data = array_len;
+    *(uint16_t*)(data + 2) = (uint16_t)elmnt_type;
+
+    vm_data_emit(data, array_size + array_info);
+
+    EMIT(AINIT, NUM16(array_addr));
+}
+
 ast_t* ast_new(type_t type, eval_t eval)
 {
     ast_t* ast = malloc(sizeof (ast_t));
@@ -524,21 +576,23 @@ ast_if_cond_t* ast_new_if_cond(type_t type, ast_t* condition, ast_t* if_then, as
     return ast_if_cond;
 }
 
-ast_assign_t* ast_new_assign(type_t type, symbol_t* symbol, ast_t* expr, bool_t new_variable)
+ast_assign_t* ast_new_assign(type_t type, symbol_t* symbol, ast_t* expr, ast_t* index_expr, bool_t new_variable)
 {
     ast_assign_t* ast_assign = malloc(sizeof (ast_assign_t));
     ast_assign->base = ast_new(type, (eval_t) eval_assign);
     ast_assign->symbol = symbol;
     ast_assign->expr = expr;
+    ast_assign->index_expr = index_expr;
     ast_assign->new_variable = new_variable;
     return ast_assign;
 }
 
-ast_variable_t* ast_new_variable(type_t type, symbol_t* symbol)
+ast_variable_t* ast_new_variable(type_t type, symbol_t* symbol, ast_t* index_expr)
 {
     ast_variable_t* ast_variable = malloc(sizeof (ast_variable_t));
     ast_variable->base = ast_new(type, (eval_t) eval_variable);
     ast_variable->symbol = symbol;
+    ast_variable->index_expr = index_expr;
     return ast_variable;
 }
 
@@ -607,3 +661,11 @@ ast_continue_loop_t* ast_new_continue_loop(type_t type, loop_t* loop)
     return ast_continue_loop;
 }
 
+ast_array_scalar_t* ast_new_array_scalar(type_t type, type_t elmnt_type, vector_t* elmnts)
+{
+    ast_array_scalar_t* ast_array_scalar = malloc(sizeof (ast_array_scalar_t));
+    ast_array_scalar->base = ast_new(type, (eval_t) eval_array_scalar);
+    ast_array_scalar->elmnts = elmnts;
+    ast_array_scalar->elmnt_type = elmnt_type;
+    return ast_array_scalar;
+}
