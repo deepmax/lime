@@ -961,12 +961,119 @@ uint8_t* vm_data_ptr()
 
 void vm_save(char* name)
 {
-    // this must have data ...
-    FILE* file = fopen(name, "w");
-    fwrite(vm.code.data, vm.code.used, 1, file);
+    // Shrink buffers before saving
+    buffer_shrink(&vm.code);
+    buffer_shrink(&vm.data);
+    
+    FILE* file = fopen(name, "wb");
+    if (file == NULL)
+    {
+        fprintf(stderr, "Error: Cannot open file '%s' for writing\n", name);
+        return;
+    }
+    
+    // Section 1: Header
+    // Write magic string "LIME!"
+    const char* magic = "LIME!";
+    fwrite(magic, sizeof(char), 5, file);
+    
+    // Write code size and data size
+    size_t code_size = vm.code.used;
+    size_t data_size = vm.data.used;
+    fwrite(&code_size, sizeof(size_t), 1, file);
+    fwrite(&data_size, sizeof(size_t), 1, file);
+    
+    // Section 2: Code
+    if (code_size > 0)
+    {
+        fwrite(vm.code.data, sizeof(uint8_t), code_size, file);
+    }
+    
+    // Section 3: Data
+    if (data_size > 0)
+    {
+        fwrite(vm.data.data, sizeof(uint8_t), data_size, file);
+    }
+    
     fclose(file);
 }
 
 void vm_load(char* name)
 {
+    FILE* file = fopen(name, "rb");
+    if (file == NULL)
+    {
+        fprintf(stderr, "Error: Cannot open file '%s' for reading\n", name);
+        return;
+    }
+    
+    // Section 1: Header
+    // Read and verify magic string "LIME!"
+    char magic[6] = {0};
+    if (fread(magic, sizeof(char), 5, file) != 5)
+    {
+        fprintf(stderr, "Error: Failed to read magic string from file '%s'\n", name);
+        fclose(file);
+        return;
+    }
+    if (strncmp(magic, "LIME!", 5) != 0)
+    {
+        fprintf(stderr, "Error: Invalid magic string in file '%s'. Expected 'LIME!', got '%.5s'\n", name, magic);
+        fclose(file);
+        return;
+    }
+    
+    // Read code size and data size
+    size_t code_size;
+    size_t data_size;
+    if (fread(&code_size, sizeof(size_t), 1, file) != 1)
+    {
+        fprintf(stderr, "Error: Failed to read code size from file '%s'\n", name);
+        fclose(file);
+        return;
+    }
+    if (fread(&data_size, sizeof(size_t), 1, file) != 1)
+    {
+        fprintf(stderr, "Error: Failed to read data size from file '%s'\n", name);
+        fclose(file);
+        return;
+    }
+    
+    // Free existing buffers
+    buffer_free(&vm.code);
+    buffer_free(&vm.data);
+    
+    // Section 2: Code
+    buffer_init(&vm.code, code_size);
+    if (code_size > 0)
+    {
+        if (fread(vm.code.data, sizeof(uint8_t), code_size, file) != code_size)
+        {
+            fprintf(stderr, "Error: Failed to read code data from file '%s'\n", name);
+            fclose(file);
+            return;
+        }
+        vm.code.used = code_size;
+    }
+    
+    // Section 3: Data
+    buffer_init(&vm.data, data_size);
+    if (data_size > 0)
+    {
+        if (fread(vm.data.data, sizeof(uint8_t), data_size, file) != data_size)
+        {
+            fprintf(stderr, "Error: Failed to read data data from file '%s'\n", name);
+            fclose(file);
+            return;
+        }
+        vm.data.used = data_size;
+    }
+    
+    fclose(file);
+    
+    // Reset VM state for execution
+    vm.ip = 0;
+    vm.sp = 0;
+    vm.bp = 0;
+    vm.flags.halt = 0;
 }
