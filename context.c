@@ -26,6 +26,7 @@ context_t* context_clone(context_t* context)
     cloned->parent = context->parent;
     cloned->block_type = context->block_type;
     cloned->symbols = vec_clone(context->symbols);
+    cloned->allocated = context->allocated;
     return cloned;
 }
 

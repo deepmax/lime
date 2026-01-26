@@ -20,10 +20,6 @@ typedef struct
             type_t ret_type;
             vector_t* param_types;
         } func;
-        struct {
-            type_t item_type;
-            size_t len;
-        } array;
     } extra;
 } symbol_t;
 
