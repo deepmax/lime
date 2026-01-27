@@ -1,0 +1,18 @@
+var arr = [6, 2, 8, 6, 5, 2, 4, 4, 8, 5, 8, 2, 6, 4, 6, 2, 6, 3, 8, 5]
+
+var len = alen(arr)
+
+for var i: i32 = 1; i < len; i = i + 1 {
+    var x = arr[i]
+    var j = i
+    for 0; j > 0 and arr[j - 1] > x; 0 {
+        arr[j] = arr[j - 1]
+        j = j - 1
+    }
+    arr[j] = x
+}
+
+for var i: i32 = 0; i < len; i = i + 1 {
+    print(arr[i], "\n")
+}
+

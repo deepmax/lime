@@ -410,9 +410,11 @@ ast_t* assign(bool_t new_variable, const char* id, ast_t* index_expr)
     {
         s->extra.array.elmnt_type = ((ast_array_scalar_t*)expr)->elmnt_type;
         s->extra.array.len = vec_size(((ast_array_scalar_t*)expr)->elmnts);
+        context_alloc_stack_addr(context, s->extra.array.len);
     }
 
-    s->type = var_type;
+    if (!index_expr)
+        s->type = var_type;
 
     return (ast_t*) ast_new_assign(MT_UNKNOWN, s, expr, index_expr, new_variable);
 }

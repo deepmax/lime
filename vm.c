@@ -82,8 +82,6 @@ const opcode_t OPCODES[] = {
     {IU16CAST, 0, "iu16cast"},
     {IU32CAST, 0, "iu32cast"},
     {IU64CAST, 0, "iu64cast"},
-    {ILOAD, 2, "iload"},
-    {ISTORE, 2, "istore"},
     {ITOR, 0, "itor"},
     {RINC, 0, "rinc"},
     {RDEC, 0, "rdec"},
@@ -115,8 +113,6 @@ const opcode_t OPCODES[] = {
     {RLE, 0, "rle"},
     {REQ, 0, "req"},
     {RNQ, 0, "rnq"},
-    {RLOAD, 2, "rload"},
-    {RSTORE, 2, "rstore"},
     {RCONST, 8, "rconst"},
     {RCONST_0, 0, "rconst_0"},
     {RCONST_1, 0, "rconst_1"},
@@ -125,12 +121,12 @@ const opcode_t OPCODES[] = {
     {RTOI, 0, "rtoi"},
     {XLOAD, 2, "xload"},
     {XSTORE, 2, "xstore"},
+    {XLOADI, 2, "xloadi"},
+    {XSTOREI, 2, "xstorei"},
     {XCONST, 2, "xconst"},
     {SPRINT, 0, "sprint"},
     {SLEN, 0, "slen"},
-    {AINIT, 2, "ainit"},
-    {AINDXR, 0, "aindxr"},
-    {AINDXW, 2, "aindxw"},
+    {ASTORE, 5, "astore"},
     {ALEN, 0, "alen"},
     {NPRINT, 0, "nprint"},
 };
@@ -157,7 +153,7 @@ void vm_free()
 void print_vm_info()
 {
     printf("stack: [");
-    for (int i=0; i<20; i++)
+    for (int i=0; i<vm.stack_size; i++)
     {
         printf("%2lx%2c ", vm.stack[i].as_uint64, (i==vm.sp)?'<':' ');
     }
@@ -571,36 +567,6 @@ void exec_opcode(uint8_t* opcode)
         ++vm.ip;
         break;
     }
-    case ILOAD:
-    {
-        vm_check_stack(1);
-        vm.stack[vm.sp + 1].as_int64 = vm.stack[vm.bp + *((uint16_t*) (opcode + 1))].as_int64;
-        ++vm.sp;
-        vm.ip += 3;
-        break;
-    }
-    case ISTORE:
-    {
-        vm.stack[vm.bp + *((uint16_t*) (opcode + 1))].as_int64 = vm.stack[vm.sp].as_int64;
-        --vm.sp;
-        vm.ip += 3;
-        break;
-    }
-    case RLOAD:
-    {
-        vm_check_stack(1);
-        vm.stack[vm.sp + 1].as_real = vm.stack[vm.bp + *((uint16_t*) (opcode + 1))].as_real;
-        ++vm.sp;
-        vm.ip += 3;
-        break;
-    }
-    case RSTORE:
-    {
-        vm.stack[vm.bp + *((uint16_t*) (opcode + 1))].as_real = vm.stack[vm.sp].as_real;
-        --vm.sp;
-        vm.ip += 3;
-        break;
-    }
     case RINC:
     {
         vm.stack[vm.sp].as_real++;
@@ -839,15 +805,31 @@ void exec_opcode(uint8_t* opcode)
     case XLOAD:
     {
         vm_check_stack(1);
-        vm.stack[vm.sp + 1].as_uint16 = vm.stack[vm.bp + *((uint16_t*) (opcode + 1))].as_uint16;
+        vm.stack[vm.sp + 1] = vm.stack[vm.bp + *((uint16_t*) (opcode + 1))];
         ++vm.sp;
         vm.ip += 3;
         break;
     }
     case XSTORE:
     {
-        vm.stack[vm.bp + *((uint16_t*) (opcode + 1))].as_uint16 = vm.stack[vm.sp].as_uint16;
+        vm.stack[vm.bp + *((uint16_t*) (opcode + 1))] = vm.stack[vm.sp];
         --vm.sp;
+        vm.ip += 3;
+        break;
+    }
+    case XLOADI:
+    {
+        vm_check_stack(1);
+        size_t index = vm.stack[vm.sp--].as_uint16;
+        vm.stack[++vm.sp] = vm.stack[vm.bp + *((uint16_t*) (opcode + 1)) + index + 1];
+        vm.ip += 3;
+        break;
+    }
+    case XSTOREI:
+    {
+        size_t index = vm.stack[vm.sp--].as_uint16;
+        value_t value = vm.stack[vm.sp--];
+        vm.stack[vm.bp + *((uint16_t*) (opcode + 1)) + index + 1] = value;
         vm.ip += 3;
         break;
     }
@@ -875,64 +857,27 @@ void exec_opcode(uint8_t* opcode)
         ++vm.ip;
         break;
     }
-    case AINIT:
+    case ASTORE:
     {
-        uint16_t array_addr = *((uint16_t*) (opcode + 1));
-        uint16_t array_len = *(uint16_t*)&vm.data.data[array_addr];
-        type_t elmnt_type = *(uint8_t*)&vm.data.data[array_addr + 2];
-        size_t elmnt_size = type_size(elmnt_type);
-        size_t array_info = sizeof(uint16_t) + sizeof(uint8_t);
+        uint64_t addr = *((uint16_t*) (opcode + 1));
+        uint64_t len = *((uint16_t*) (opcode + 3));
+        uint64_t type = *((uint8_t*) (opcode + 5));
 
-        for (uint16_t i = 0; i < array_len; i++)
+        vm.stack[vm.bp + addr].as_uint64 = (len << 16) | type;
+
+        for (int32_t i = len - 1; i >= 0; i--)
         {
-            value_t v = vm.stack[vm.bp + vm.sp - array_len + i];
-            buffer_sets(&vm.data, array_info + array_addr + i * elmnt_size, (uint8_t*)&v, elmnt_size);
+            value_t v = vm.stack[vm.sp--];
+            vm.stack[vm.bp + addr + i + 1] = v;
         }
 
-        vm.sp -= array_len;
-        vm.stack[++vm.sp].as_int64 = array_addr;
-        vm.ip += 3;
+        vm.ip += 6;
         break;
-    }
-    case AINDXR:
-    {
-        vm_check_stack(1);
-        const uint16_t array_addr = vm.stack[vm.sp--].as_uint16;
-        const uint16_t index = vm.stack[vm.sp--].as_uint64;
-        const uint8_t elmnt_size = type_size(*(uint8_t*)&(vm.data.data[array_addr + 2]));
-        const size_t n = array_addr +  sizeof(uint16_t) + sizeof(uint8_t) + index * elmnt_size;
-        value_t v; v.as_uint64 = 0;
-        memcpy(&v,  vm.data.data + n, elmnt_size);
-        vm.stack[++vm.sp] = v;
-        ++vm.ip;
-        break;
-
-        // uint16_t array_len = *(uint16_t*)&vm.data.data[array_addr];
-        // TODO: if (index >= array_len) {}
-    }
-    case AINDXW:
-    {
-        vm_check_stack(1);
-        const uint16_t array_addr = vm.stack[vm.bp + *((uint16_t*) (opcode + 1))].as_uint16;
-        const uint16_t index = vm.stack[vm.sp--].as_uint64;
-        const uint8_t elmnt_size = type_size(*(uint8_t*)&(vm.data.data[array_addr + 2]));
-        const size_t n = array_addr + sizeof(uint16_t) + sizeof(uint8_t) + index * elmnt_size;
-        value_t v;
-        v.as_uint64 = 0;
-        memcpy(&v,  vm.data.data + n, elmnt_size);
-        vm.stack[++vm.sp] = v;
-        vm.ip += 3;
-        break;
-
-        // uint16_t array_len = *(uint16_t*)&vm.data.data[array_addr];
-        // TODO: if (index >= array_len) {}
     }
     case ALEN:
     {
-        vm_check_stack(1);
-        uint16_t array_addr = vm.stack[vm.sp].as_uint16;
-        const uint16_t len = *(uint16_t*)&vm.data.data[array_addr];
-        vm.stack[vm.sp].as_int64 = len;
+        size_t addr = vm.stack[vm.sp].as_uint16;
+        vm.stack[vm.sp].as_int64 = vm.stack[vm.bp + addr].as_uint64 >> 16;
         ++vm.ip;
         break;
     }

@@ -1,4 +1,6 @@
 #include "context.h"
+#include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -54,7 +56,7 @@ symbol_t* context_add(context_t* context, const char* id, type_t type)
     symbol_t* new_symbol = malloc(sizeof (symbol_t));
     new_symbol->id = id;
     new_symbol->type = type;
-    new_symbol->addr = context_alloc_stack_addr(context);
+    new_symbol->addr = context_alloc_stack_addr(context, 1);
     new_symbol->extra.func.ret_type = MT_UNKNOWN;
     new_symbol->extra.func.param_types = NULL;
 
@@ -128,12 +130,14 @@ context_t* context_get_func(context_t* context)
     return NULL;
 }
 
-uint16_t context_alloc_stack_addr(context_t* context)
+uint16_t context_alloc_stack_addr(context_t* context, uint16_t size)
 {
     context_t* func_context = context_get_func(context);
     if (func_context != NULL)
     {
-        return func_context->allocated++;
+        func_context->allocated += size;
+        return func_context->allocated;
     }
-    return global_context->allocated++;
+    global_context->allocated += size;
+    return global_context->allocated;
 }

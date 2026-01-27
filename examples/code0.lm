@@ -1,18 +1,8 @@
-var arr = [6, 2, 8, 6, 5, 2, 4, 3, 8, 4, 2, 9, 2]
+var arr = [1, 2, 3]
 
-arr[0] = 12
+var arr2 = arr
 
-#var len = alen(arr)
-#
-#for var i=0; i<len; i=i+1 {
-#    for var j=0; j<len-i-1; j=j+1 {
-#        var temp = arr[j]
-#        arr[j] = arr[j+1]
-#        arr[j+1] = temp
-#
-#    }    
-#}
+print(alen(arr2))
 
-#for var i=0; i<len; i=i+1 {
-#    print(arr[i], "\n")
-#}
+
+

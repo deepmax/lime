@@ -52,7 +52,7 @@ bool_t context_is_global(context_t* context);
 size_t context_symbols_count(context_t* context);
 uint16_t context_allocated(context_t* context);
 void context_add_args_count(context_t* context, uint16_t count);
-uint16_t context_alloc_stack_addr(context_t* context);
+uint16_t context_alloc_stack_addr(context_t* context, uint16_t size);
 loop_t* context_get_loop(context_t* context);
 context_t* context_get_func(context_t* context);
 

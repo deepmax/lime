@@ -306,23 +306,14 @@ void eval_assign(ast_assign_t* ast)
     if (ast->index_expr)
     {
         eval(ast->index_expr);
-        EMIT(AINDXW);
-        EMIT(XSTORE, NUM16(ast->symbol->addr));
-    }
-    else if (is_integer_type(var_type))
-    {
-        EMIT(ISTORE, NUM16(addr));
-    }
-    else if (is_real_type(var_type))
-    {
-        EMIT(RSTORE, NUM16(addr));
-    }
-    else if (is_str_type(var_type))
-    {
-        EMIT(XSTORE, NUM16(addr));
+        EMIT(XSTOREI, NUM16(ast->symbol->addr));
     }
     else if (is_array_type(var_type))
     {
+        type_t elmnt_type = ast->symbol->extra.array.elmnt_type;
+        size_t array_len = ast->symbol->extra.array.len;
+        EMIT(ASTORE, NUM16(addr), NUM16(array_len), NUM8(elmnt_type));
+    } else {
         EMIT(XSTORE, NUM16(addr));
     }
 
@@ -340,19 +331,9 @@ void eval_variable(ast_variable_t* ast)
     if (ast->index_expr)
     {
         eval(ast->index_expr);
-        EMIT(XLOAD, NUM16(ast->symbol->addr));
-        EMIT(AINDXR);
+        EMIT(XLOADI, NUM16(ast->symbol->addr));
     }
-    else if (is_integer_type(var_type)) {
-        EMIT(ILOAD, NUM16(addr));
-    } 
-    else if (is_real_type(var_type)) {
-        EMIT(RLOAD, NUM16(addr));
-    }
-    else if (is_str_type(var_type)) {
-        EMIT(XLOAD, NUM16(addr));
-    }
-    else if (is_array_type(var_type))
+    else
     {
         EMIT(XLOAD, NUM16(addr));
     }
@@ -494,23 +475,6 @@ void eval_array_scalar(ast_array_scalar_t* ast)
     {
         eval(vec_get(ast->elmnts, i));
     }
-
-    type_t elmnt_type = ast->elmnt_type;
-    size_t array_addr = vm_data_used();
-    size_t array_len = vec_size(ast->elmnts);
-    size_t elmnt_size = type_size(elmnt_type);
-    size_t array_size = array_len * elmnt_size;
-    uint8_t data[array_size];
-    size_t array_info = sizeof(uint16_t) + sizeof(uint8_t);
-
-    memset(data, 0, array_size + array_info);
-
-    *(uint16_t*)data = array_len;
-    *(uint16_t*)(data + 2) = (uint16_t)elmnt_type;
-
-    vm_data_emit(data, array_size + array_info);
-
-    EMIT(AINIT, NUM16(array_addr));
 }
 
 ast_t* ast_new(type_t type, eval_t eval)
