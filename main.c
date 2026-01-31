@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <getopt.h>
 #include <string.h>
+#include <inttypes.h>
 
 
 void print_help_compiler()
@@ -143,6 +144,20 @@ int main_executor(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
+    // union {
+    //     double r;
+    //     int64_t i;
+    //     uint64_t u;
+    // } u;
+
+    // u.u = 0x8000000000000000;
+
+    // printf("%" PRIx64 "\n", u.u);
+    // printf("%" PRIu64 "\n", u.u);
+
+
+    // return 0;
+
     if (argc < 2)
     {
         print_help();

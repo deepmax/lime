@@ -272,11 +272,8 @@ void exec_opcode(uint8_t* opcode)
     }
     case JEZ:
     {
-        // Check both int64 and real (for real comparison results)
-        // Real comparisons return 0.0 or 1.0, so we need to check as_real first
-        // to avoid reading as_int64 when the value is actually a real
-        int is_zero = (vm.stack[vm.sp].as_real == 0.0) || (vm.stack[vm.sp].as_int64 == 0);
-        if (is_zero)
+        // TODO: real type has problem with this
+        if (vm.stack[vm.sp].as_int64 == 0)
             vm.ip = *((uint16_t*) (opcode + 1));
         else
             vm.ip += 3;
@@ -285,6 +282,7 @@ void exec_opcode(uint8_t* opcode)
     }
     case JNZ:
     {
+        // TODO: real type has problem with this
         if (vm.stack[vm.sp].as_int64 != 0)
             vm.ip = *((uint16_t*) (opcode + 1));
         else
@@ -876,8 +874,7 @@ void exec_opcode(uint8_t* opcode)
     }
     case ALEN:
     {
-        size_t addr = vm.stack[vm.sp].as_uint16;
-        vm.stack[vm.sp].as_int64 = vm.stack[vm.bp + addr].as_uint64 >> 16;
+        vm.stack[vm.sp].as_int64 = vm.stack[vm.bp + vm.sp].as_uint64 >> 16;
         ++vm.ip;
         break;
     }
