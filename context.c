@@ -56,7 +56,7 @@ symbol_t* context_add(context_t* context, const char* id, type_t type)
     symbol_t* new_symbol = malloc(sizeof (symbol_t));
     new_symbol->id = id;
     new_symbol->type = type;
-    new_symbol->addr = context_alloc_stack_addr(context, 1);
+    new_symbol->addr_on_stack = context_alloc_stack_addr(context, 1);
     new_symbol->extra.func.ret_type = MT_UNKNOWN;
     new_symbol->extra.func.param_types = NULL;
 
@@ -100,11 +100,6 @@ size_t context_symbols_count(context_t* context)
 uint16_t context_allocated(context_t* context)
 {
     return context->allocated;
-}
-
-void context_add_args_count(context_t* context, uint16_t count)
-{
-    context->allocated += count;
 }
 
 loop_t* context_get_loop(context_t* context)

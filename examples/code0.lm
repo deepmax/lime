@@ -1,8 +1,33 @@
-var arr = [1, 2, 3]
+#var arr = [1, 2, 3]
+#var arr2 = arr
+#print(alen(arr2))
 
-var arr2 = arr
+#var arr = [6.0, 2.0, 8.0, 8.0]
+#
+#var len = alen(arr)
+#
+#for var i: i32 = 1; i < len; i = i + 1 {
+#    var x = arr[i]
+#    var j = i
+#    for 0; j > 0 and arr[j - 1] > x; 0 {
+#        arr[j] = arr[j - 1]
+#        j = j - 1
+#    }
+#    arr[j] = x
+#}
+#
+#for var i: i32 = 0; i < len; i = i + 1 {
+#    print(arr[i], "\n")
+#}
 
-print(alen(arr2))
+var i = 0
 
+for {
+    print(i)
 
+    i = i + 1
 
+    if i > 4 {
+        break
+    }
+}

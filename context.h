@@ -14,9 +14,10 @@ typedef struct
 {
     const char* id;
     type_t type;
-    uint16_t addr;
+    uint16_t addr_on_stack;
     union {
         struct {
+            uint16_t call_addr;
             type_t ret_type;
             vector_t* param_types;
         } func;
@@ -51,7 +52,6 @@ symbol_t* context_get(context_t* context, const char* id, bool_t local);
 bool_t context_is_global(context_t* context);
 size_t context_symbols_count(context_t* context);
 uint16_t context_allocated(context_t* context);
-void context_add_args_count(context_t* context, uint16_t count);
 uint16_t context_alloc_stack_addr(context_t* context, uint16_t size);
 loop_t* context_get_loop(context_t* context);
 context_t* context_get_func(context_t* context);

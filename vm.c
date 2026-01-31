@@ -234,10 +234,10 @@ void exec_opcode(uint8_t* opcode)
         uint16_t vars = *((uint16_t*) (opcode + 3));
         uint32_t _bp = vm.stack[vm.sp--].as_uint32;
         uint32_t _ip = vm.stack[vm.sp--].as_uint32;
-        vm.stack[vm.sp+1].as_uint32 = 0; // clean
-        vm.stack[vm.sp+2].as_uint32 = 0; // clean
-        vm.bp = vm.sp - args + 1;
-        vm_check_stack(vars); // -2 ?
+        vm.stack[vm.sp+1].as_uint32 = 0;
+        vm.stack[vm.sp+2].as_uint32 = 0;
+        vm.bp = vm.sp - args;
+        vm_check_stack(vars);
         vm.sp += vars;
         vm.stack[++vm.sp].as_uint32 = _ip;
         vm.stack[++vm.sp].as_uint32 = _bp;

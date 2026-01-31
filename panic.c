@@ -5,7 +5,7 @@
 
 void panic(const char* msg)
 {
-    fprintf(stderr, "%s : %ld %ld", msg, lexer_row(), lexer_col());
+    fprintf(stderr, "%s : %ld %ld", msg, lexer_row() + 1, lexer_col() + 1);
     exit(0);
 }
 

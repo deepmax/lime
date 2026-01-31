@@ -70,9 +70,9 @@ void eval_constant(ast_constant_t* ast)
     }
     else if (is_str_type(type))
     {
-        uint16_t addr = vm_data_used();
+        uint16_t addr_on_data = vm_data_used();
         vm_data_emit((uint8_t*)ast->value.as_str, utf8size((utf8_int8_t*)ast->value.as_str));
-        EMIT(XCONST, NUM16(addr));
+        EMIT(XCONST, NUM16(addr_on_data));
     }
 }
 
@@ -301,20 +301,20 @@ void eval_assign(ast_assign_t* ast)
 {
     eval(ast->expr);
     type_t var_type = ast->symbol->type;
-    uint16_t addr = ast->symbol->addr;
+    uint16_t addr_on_stack = ast->symbol->addr_on_stack;
 
     if (ast->index_expr)
     {
         eval(ast->index_expr);
-        EMIT(XSTOREI, NUM16(ast->symbol->addr));
+        EMIT(XSTOREI, NUM16(ast->symbol->addr_on_stack));
     }
     else if (is_array_type(var_type))
     {
         type_t elmnt_type = ast->symbol->extra.array.elmnt_type;
         size_t array_len = ast->symbol->extra.array.len;
-        EMIT(ASTORE, NUM16(addr), NUM16(array_len), NUM8(elmnt_type));
+        EMIT(ASTORE, NUM16(addr_on_stack), NUM16(array_len), NUM8(elmnt_type));
     } else {
-        EMIT(XSTORE, NUM16(addr));
+        EMIT(XSTORE, NUM16(addr_on_stack));
     }
 
     if (!ast->new_variable)
@@ -326,16 +326,16 @@ void eval_assign(ast_assign_t* ast)
 void eval_variable(ast_variable_t* ast)
 {
     type_t var_type = ast->symbol->type;
-    uint16_t addr = ast->symbol->addr;
+    uint16_t addr_on_stack = ast->symbol->addr_on_stack;
 
     if (ast->index_expr)
     {
         eval(ast->index_expr);
-        EMIT(XLOADI, NUM16(ast->symbol->addr));
+        EMIT(XLOADI, NUM16(addr_on_stack));
     }
     else
     {
-        EMIT(XLOAD, NUM16(addr));
+        EMIT(XLOAD, NUM16(addr_on_stack));
     }
 }
 
@@ -350,7 +350,7 @@ void eval_func_decl(ast_func_decl_t* ast)
     uint16_t args = ast->args;
     EMIT(PROC, NUM16(args), NUM16((vars - args)));
 
-    ast->symbol->addr = func_beg->label;
+    ast->symbol->extra.func.call_addr = func_beg->label;
 
     eval((ast_t*) ast->body);
 
@@ -370,7 +370,7 @@ void eval_func_call(ast_func_call_t* ast)
         eval(vec_get(ast->args, i));
     }
     
-    EMIT(CALL, NUM16(ast->symbol->addr));
+    EMIT(CALL, NUM16(ast->symbol->extra.func.call_addr));
 }
 
 void eval_builtin_call(ast_builtin_call_t* ast)
@@ -444,7 +444,8 @@ void eval_for_loop(ast_for_loop_t* ast)
     eval(ast->init);
     MARK(ast->loop->begin);
     eval(ast->condition);
-    JUMP(JEZ, ast->loop->end);
+    if (ast->condition)
+        JUMP(JEZ, ast->loop->end);
     eval(ast->body);
     MARK(ast->loop->post);
     eval(ast->post);

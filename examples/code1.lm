@@ -1,20 +1,20 @@
-func factorial(n : i32) : i32 {
+func factorial(n: i32): i32 {
     if n <= 1 {
-        ret 1
+        return 1
     }
-    ret factorial(n - 1) * n
+    return factorial(n - 1) * n
 }
 
 
 func max(a: i32, b: i32): i32 {
     if a > b {
-        ret a
+        return a
     } else {
-        ret b
+        return b
     }
 }
 
-var a = factorial(3)
+var a = max(factorial(3), factorial(4))
 
 print(a)
 
@@ -25,5 +25,5 @@ print(a)
 # }
 # var s: point
 # s.x = 1.1
-$ s.y = 2.2
+# s.y = 2.2
 # var a: array[point*3] = [point(1,1), point(2,2), point(3.3)]

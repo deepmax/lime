@@ -681,12 +681,35 @@ ast_t* for_loop()
     context_t* new_context = context_new(context, MB_NORMAL);
     context = new_context;
 
+
     match(TK_FOR);
-    ast_t* init = look.type == TK_VAR? var() : expression();
-    match(TK_SEMICOLON);
-    ast_t* condition = expression();
-    match(TK_SEMICOLON);
-    ast_t* post = expression();
+
+    ast_t* init = NULL;
+    ast_t* condition = NULL;
+    ast_t* post = NULL;
+
+    if (look.type != TK_L_BRACE)
+    {
+        switch (look.type) {
+            case TK_VAR: init = var(); break;
+            case TK_SEMICOLON: init = NULL; break;
+            default: init = expression(); break;
+        }
+
+        match(TK_SEMICOLON);
+
+        switch (look.type) {
+            case TK_SEMICOLON: condition = NULL; break;
+            default: condition = expression(); break;
+        }
+
+        match(TK_SEMICOLON);
+        
+        switch (look.type) {
+            case TK_L_BRACE: post = NULL; break;
+            default: post = expression(); break;
+        }
+    }
 
     ast_block_t* for_block = (ast_block_t*) ast_new_for_loop(MT_UNKNOWN, init, condition, post, block(MB_LOOP, NULL));
 
